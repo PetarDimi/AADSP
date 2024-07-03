@@ -1,0 +1,342 @@
+1     	 0010				_BLOCK_SIZE .equ 16
+2     	 0002				_INPUT_NUM_CHANNELS .equ 2
+3     	 0006				_OUTPUT_NUM_CHANNELS .equ 6
+4     						
+5     	 0000				_LEFT_CH_IN .equ 0
+6     	 0001				_RIGHT_CH_IN .equ 1
+7     	 0000				_L_CH_OUT .equ 0
+8     	 0001				_C_CH_OUT .equ 1
+9     	 0002				_LS_CH_OUT .equ 2
+10    	 0003				_RS_CH_OUT .equ 3
+11    	 0004				_R_CH_OUT .equ 4
+12    	 0005				_LFE_CH_OUT .equ 5
+13    						
+14    	 0040				_n_coeff	.equ 64
+15    						
+16    	 0000					.public _processing
+17    	 0000					.public _initProcessing
+18    						//	.public _fir_circular
+19    	 0000					.extern _processing
+20    	 0000					.extern _preGain
+21    	 0000					.extern _mode
+22    	 0000					.extern _coeffs_bpf
+23    	 0000					.extern _coeffs_lpf_18kHz
+24    	 0000					.extern _coeffs_hpf_800Hz
+25    	 0000					.extern _p_state_def
+26    	 0000					.extern _history_def
+27    							
+28    							.code _ovly
+28     >> start of macro: .code
+1+    									seg_single , "CODE", CODE
+1+     >> start of macro: seg_single
+1+    						  .if ( "" != "" ) & defined( ___SegStart_CODE_ )
+2+    						    segment
+3+    						  .else
+4+    						    segment "CODE"
+5+    							.if "" != ""
+6+    						___SegStart_CODE_
+7+    							.endif
+8+    						  .endif
+9+    							#RememberSegmentType
+10+    >> end of macro: seg_single
+2+     >> end of macro: .code
+29    							
+30    	 0000				_initProcessing:
+31    	 0000	 88440000		xmem[_preGain] = a0
+32    	 0001	 81880000		ret
+33    							
+34    	 0002				_processing:
+35    	 0002	 84050000		i4 = i0 + (_LEFT_CH_IN)
+36    	 0003	 85150000		i5 = i1 + (_L_CH_OUT)
+37    							
+38    	 0004	 8100003A		do(_BLOCK_SIZE), >loop:
+39    	 0005	 80940010		x0 = ymem[i0]; i0+=1
+40    	 0006	 84040000		y0 = xmem[_preGain]
+41    	 0007	 00002400		a0 = x0 * y0
+42    	 0008	 88D40011		ymem[i1] = a0; i1 += 1
+43    	 0009	 80940014		x0 = ymem[i4]; i4 += 1
+44    	 000A	 00002401		a1 = x0 * y0
+45    	 000B	 89D40015		ymem[i5] = a1; i5 += 1
+46    							////////////////////////
+47    	 000C	 85150001		i5 = i1 + (_C_CH_OUT)
+48    							
+49    	 000D	 8100003A		do(_BLOCK_SIZE), >loop:
+50    	 000E	 80940010		x0 = ymem[i0]; i0+=1
+51    	 000F	 84040000		y0 = xmem[_preGain]
+52    	 0010	 00002400		a0 = x0 * y0
+53    	 0011	 88D40011		ymem[i1] = a0; i1 += 1
+54    	 0012	 80940014		x0 = ymem[i4]; i4 += 1
+55    	 0013	 00002401		a1 = x0 * y0
+56    	 0014	 89D40015		ymem[i5] = a1; i5 += 1
+57    							///////////////////////
+58    	 0015	 85150002		i5 = i1 + (_LS_CH_OUT)
+59    							
+60    	 0016	 8100003A		do(_BLOCK_SIZE), >loop:
+61    	 0017	 80940010		x0 = ymem[i0]; i0+=1
+62    	 0018	 84040000		y0 = xmem[_preGain]
+63    	 0019	 00002400		a0 = x0 * y0
+64    	 001A	 88D40011		ymem[i1] = a0; i1 += 1
+65    	 001B	 80940014		x0 = ymem[i4]; i4 += 1
+66    	 001C	 00002401		a1 = x0 * y0
+67    	 001D	 89D40015		ymem[i5] = a1; i5 += 1
+68    							///////////////////////
+69    	 001E	 84050001		i4 = i0 + (_RIGHT_CH_IN)
+70    	 001F	 85150003		i5 = i1 + (_RS_CH_OUT)
+71    							
+72    	 0020	 8100003A		do(_BLOCK_SIZE), >loop:
+73    	 0021	 80940010		x0 = ymem[i0]; i0+=1
+74    	 0022	 84040000		y0 = xmem[_preGain]
+75    	 0023	 00002400		a0 = x0 * y0
+76    	 0024	 88D40011		ymem[i1] = a0; i1 += 1
+77    	 0025	 80940014		x0 = ymem[i4]; i4 += 1
+78    	 0026	 00002401		a1 = x0 * y0
+79    	 0027	 89D40015		ymem[i5] = a1; i5 += 1
+80    							////////////////////////
+81    	 0028	 85150004		i5 = i1 + (_R_CH_OUT)
+82    							
+83    	 0029	 8100003A		do(_BLOCK_SIZE), >loop:
+84    	 002A	 80940010		x0 = ymem[i0]; i0+=1
+85    	 002B	 84040000		y0 = xmem[_preGain]
+86    	 002C	 00002400		a0 = x0 * y0
+87    	 002D	 88D40011		ymem[i1] = a0; i1 += 1
+88    	 002E	 80940014		x0 = ymem[i4]; i4 += 1
+89    	 002F	 00002401		a1 = x0 * y0
+90    	 0030	 89D40015		ymem[i5] = a1; i5 += 1
+91    							//////////////////////////
+92    	 0031	 85150005		i5 = i1 + (_LFE_CH_OUT)
+93    							
+94    	 0032	 8100003A		do(_BLOCK_SIZE), >loop:
+95    	 0033	 80940010		x0 = ymem[i0]; i0+=1
+96    	 0034	 84040000		y0 = xmem[_preGain]
+97    	 0035	 00002400		a0 = x0 * y0
+98    	 0036	 88D40011		ymem[i1] = a0; i1 += 1
+99    	 0037	 80940014		x0 = ymem[i4]; i4 += 1
+100   	 0038	 00002401		a1 = x0 * y0
+101   	 0039	 89D40015		ymem[i5] = a1; i5 += 1
+102   	 003A				%loop:
+103   						
+104   	 003A	 81880000		ret
+105   						
+106   							
+107   						/*_fir_circular:
+108   							xmem[i7] = i4; i7+=1
+109   							xmem[i7] = i3; i7+=1
+110   							ymem[i7] = i2; i7+=1
+111   							xmem[i7] = i5; i7+=1
+112   							xmem[i7] = a2g; i7+=1
+113   							xmem[i7] = a2h; i7+=1
+114   							xmem[i7] = a2l; i7+=1
+115   							xmem[i7] = b3; i7+=1
+116   							xmem[i7] = a3; i7+=1
+117   							
+118   						
+119   							i4 = i4 + (_n_coeff)	# for start in for loop
+120   							i4-=1
+121   							
+122   							i3 = (_history_def)	# history + index
+123   							i2 = (_p_state_def)	# p_state + index
+124   							
+125   							b1 & b1
+126   							if(b == 0) jmp>continue
+127   								i3 = i3 + (_n_coeff)
+128   								i2+=1
+129   								
+130   						%continue:
+131   							a0 = xmem[i4]	# state
+132   							nm4 = a0
+133   							i5 = i3
+134   							nop
+135   							i5+=n
+136   							nop
+137   							nm4 = (0)
+138   							nop
+139   							xmem[i5] = b0
+140   							
+141   							halfword(a1) = (1)
+142   							a0 = a0 + a1
+143   							halfword(a1) = (_n_coeff)
+144   							a0 - a1
+145   							if(a <= 0) jmp>continue3
+146   								a0 = (0)	# state = 0
+147   						
+148   						%continue3:
+149   							//a1 = (0)	# ret val = 0
+150   							nm2 = a0	# history + state
+151   							nop
+152   							i3+=n
+153   							nm2 = (0)
+154   							
+155   							do(120),>firLoop
+156   								# ret_val += coefs * history
+157   								x0 = ymem[i4]
+158   								x1 = ymem[i3]
+159   								a1 += x0 * x1
+160   								
+161   								halfword(a3) = (1)
+162   								a0 = a0 + a3
+163   								halfword(a3) = (_n_coeff)
+164   								a0 - a3
+165   								if(a <= 0) jmp>else
+166   									a0 = (0)	# state = 0
+167   									nm2 = a0
+168   									i3 = (_history_def)
+169   									nop
+170   									i4+=n
+171   									nm2 = (0)
+172   									jmp>firLoop
+173   						%else:
+174   							i3+=1	# historyPtr++
+175   							nop
+176   							
+177   						%firLoop:	i4-=1	# coefsPtr--
+178   							xmem[i4] = a0
+179   							
+180   							i7-=1
+181   							a3 = xmem[i7]
+182   							i7-=1
+183   							b3 = xmem[i7]
+184   							i7-=1
+185   							a2l = xmem[i7]
+186   							i7-=1
+187   							a2h = xmem[i7]
+188   							i7-=1
+189   							a2g = xmem[i7]
+190   							i7-=1
+191   							i5 = xmem[i7]
+192   							i7-=1
+193   							i2 = xmem[i7]
+194   							i7-=1
+195   							i3 = xmem[i7]
+196   							i7-=1
+197   							i4 = xmem[i7]
+198   							
+199   							ret
+200   							
+201   						_processing:
+202   							# push
+203   							ymem[i7] = a2;	i7 += 1
+204   							ymem[i7] = i2;	i7 += 1
+205   							ymem[i7] = i3
+206   							
+207   							i2 = i0
+208   							i3 = i1
+209   							
+210   							nm2 = (16)
+211   							x3 = xmem[_preGain]
+212   							do(_BLOCK_SIZE),>loop
+213   								nm3 = (16)
+214   								# first stage, apply constant pre-Gain
+215   								# need to save inSamples to temp variable becouse i/o buffer is shared bethween in and out samples -> pIn and pOut point to same memory
+216   								# *tempSamplePtr = *samplePtrIn * preGain;	samplePtrIn += BLOCK_SIZE;
+217   								y0 = ymem[i2];	i2 += n
+218   								a0 = x3 * y0;	y0 = ymem[i2];	i2 -= n		#samplePtrIn -= BLOCK_SIZE;
+219   								# *tempSamplePtr = *samplePtrIn * preGain
+220   								a1 = x3 * y0; i3 += n
+221   								
+222   								# second stage, apply filters
+223   								# first ch - passthrough
+224   								# *samplePtrOut = *tempSamplePtr;	samplePtrOut += BLOCK_SIZE;
+225   								ymem[i3] = a0;	i3 += n
+226   								
+227   								#save a0
+228   								a2 = a0
+229   								# second ch	- LPF
+230   						 		b1 = (0)
+231   						 		i4 = (_coeffs_lpf_18kHz)
+232   						 		call _fir_circular
+233   						 		ymem[i3] = a0;	i3 += n
+234   								
+235   						 		#third ch - HPF
+236   						 		a0 = a2
+237   						 		b1 = (1)
+238   						 		i4 = (_coeffs_hpf_800Hz)
+239   						 		call _fir_circular
+240   						 		ymem[i3] = a0;  i3 += n
+241   						 		
+242   						 		#fourth ch - BPF
+243   						 		a0 = a2
+244   						 		b1 = (2)
+245   						 		i4 = (_coeffs_bpf)
+246   						 		call _fir_circular
+247   						 		ymem[i3] = a0; i3 += n
+248   						 		
+249   						 		#fifth ch - BPF
+250   								a0 = a2
+251   						 		b1 = (3)
+252   						 		i4 = (_coeffs_bpf)
+253   						 		call _fir_circular
+254   						 		ymem[i3] = a0; i3 += n
+255   						 		
+256   						 		#sixth ch - HPF
+257   						 		a0 = a2
+258   						 		b1 = (4)
+259   						 		i4 = (_coeffs_hpf_800Hz)
+260   						 		call _fir_circular
+261   								ymem[i3] = a0;  i3 += n
+262   						 		
+263   						 		#seventh ch - LPF
+264   						 		a0 = a2
+265   						 		b1 = (5)
+266   						 		i4 = (_coeffs_lpf_18kHz)
+267   						 		call _fir_circular
+268   								ymem[i3] = a0
+269   								
+270   								nm3 = (111)
+271   								
+272   								#samplePtrIn++;
+273   								i4 += 1
+274   						%loop:	i3 -= n
+275   						
+276   							nm2 = (0)
+277   							nm3 = (0)
+278   						
+279   							#pop
+280   							i3 = ymem[i7];	i7 -= 1	
+281   							i4 = ymem[i7];	i7 -= 1
+282   							a2 = ymem[i7]
+283   							ret
+284   						*/
+				 SYMBOL TABLE 
+
+    Name                                                                                    Type                  Value 
+
+_BLOCK_SIZE                                                                     					 Number				          16 (10H)
+_COMMON_INC_PATH_                                                               					 Define                 "C:/CirrusDSP/crystal32/common/inc/"
+_C_CH_OUT                                                                       					 Number				          1 (1H)
+_DSP_                                                                           					 Define                 "a"
+_INPUT_NUM_CHANNELS                                                             			  Unused Number				      2 (2H)
+_LEFT_CH_IN                                                                     					 Number				         0 (0H)
+_LFE_CH_OUT                                                                     					 Number				          5 (5H)
+_LOCAL_INC_PATH_                                                                					 Define                 "inc/"
+_LOCAL_SRC_PATH_                                                                					 Define                 "src/"
+_LS_CH_OUT                                                                      					 Number				          2 (2H)
+_L_CH_OUT                                                                       					 Number				         0 (0H)
+_MUI_VERSION_                                                                   					 Define                 "020000"
+_OUTPUT_NUM_CHANNELS                                                            			  Unused Number				      6 (6H)
+_OVLY_                                                                          					 Define                 "standalone"
+_OVLY_REVISION_                                                                 					 Define                 "020000"
+_RIGHT_CH_IN                                                                    					 Number				          1 (1H)
+_ROUTER_INC_PATH_                                                               					 Define                 "rom_inc/"
+_RS_CH_OUT                                                                      					 Number				          3 (3H)
+_R_CH_OUT                                                                       					 Number				          4 (4H)
+_SLOT_                                                                          					 Define                 "0"
+_TARGET_FAMILY_                                                                 					 Define                 "crystal32"
+_TOOLS_VERSION_                                                                 					 Define                 "0x0701"
+_VERSION_                                                                       					 Define                 "00"
+__CASM_VER__                                                                    			  Unused Variable		        0 (701H)
+_coeffs_bpf                                                                     					 External   
+_coeffs_hpf_800Hz                                                               					 External   
+_coeffs_lpf_18kHz                                                               					 External   
+_history_def                                                                    					 External   
+_initProcessing                                                                 			  Public Relocatable       processing_GEN_0000:0000H
+_mode                                                                           					 External   
+_n_coeff                                                                        			  Unused Number				      64 (40H)
+_p_state_def                                                                    					 External   
+_preGain                                                                        					 External   
+_processing                                                                     			  Public Relocatable       processing_GEN_0000:0002H
+
+	       SEGMENTS:
+
+Size			  Name										 Class
+0000H	 __INIT                                  			 CODE                                    
+003BH	 processing_GEN_0000                     			 CODE                                    

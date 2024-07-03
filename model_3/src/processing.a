@@ -1,0 +1,210 @@
+_BLOCK_SIZE .equ 16
+_INPUT_NUM_CHANNELS .equ 2
+_OUTPUT_NUM_CHANNELS .equ 6
+
+_LEFT_CH_IN .equ 0
+_RIGHT_CH_IN .equ 1
+_L_CH_OUT .equ 0
+_C_CH_OUT .equ 1
+_LS_CH_OUT .equ 2
+_RS_CH_OUT .equ 3
+_R_CH_OUT .equ 4
+_LFE_CH_OUT .equ 5
+
+_n_coeff	.equ 64
+
+	.public _processing
+	.public _initProcessing
+	.public _fir_circular
+	.extern _processing
+	.extern _preGain
+	.extern _mode
+	.extern _coeffs_bpf
+	.extern _coeffs_lpf_18kHz
+	.extern _coeffs_hpf_800Hz
+	.extern _p_state_def
+	.extern _history_def
+	
+	.code _ovly
+	
+_initProcessing:
+	xmem[_preGain] = a0
+	ret
+	
+_fir_circular:
+	xmem[i7] = i4; i7+=1
+	xmem[i7] = i3; i7+=1
+	ymem[i7] = i2; i7+=1
+	xmem[i7] = i5; i7+=1
+	xmem[i7] = a2g; i7+=1
+	xmem[i7] = a2h; i7+=1
+	xmem[i7] = a2l; i7+=1
+	xmem[i7] = b3; i7+=1
+	xmem[i7] = a3; i7+=1
+	
+
+	i4 = i4 + (_n_coeff)	# for start in for loop
+	i4-=1
+	
+	i3 = (_history_def)	# history + index
+	i2 = (_p_state_def)	# p_state + index
+	
+	b1 & b1
+	if(b == 0) jmp>continue
+		i3 = i3 + (_n_coeff)
+		i2+=1
+		
+%continue:
+	a0 = xmem[i4]	# state
+	nm4 = a0
+	i5 = i3
+	nop
+	i5+=n
+	nop
+	nm4 = (0)
+	nop
+	xmem[i5] = b0
+	
+	halfword(a1) = (1)
+	a0 = a0 + a1
+	halfword(a1) = (_n_coeff)
+	a0 - a1
+	if(a <= 0) jmp>continue3
+		a0 = (0)	# state = 0
+
+%continue3:
+	//a1 = (0)	# ret val = 0
+	nm2 = a0	# history + state
+	nop
+	i3+=n
+	nm2 = (0)
+	
+	do(120),>firLoop
+		# ret_val += coefs * history
+		x0 = ymem[i4]
+		x1 = ymem[i3]
+		a1 += x0 * x1
+		
+		halfword(a3) = (1)
+		a0 = a0 + a3
+		halfword(a3) = (_n_coeff)
+		a0 - a3
+		if(a <= 0) jmp>else
+			a0 = (0)	# state = 0
+			nm2 = a0
+			i3 = (_history_def)
+			nop
+			i4+=n
+			nm2 = (0)
+			jmp>firLoop
+%else:
+	i3+=1	# historyPtr++
+	nop
+	
+%firLoop:	i4-=1	# coefsPtr--
+	xmem[i4] = a0
+	
+	i7-=1
+	a3 = xmem[i7]
+	i7-=1
+	b3 = xmem[i7]
+	i7-=1
+	a2l = xmem[i7]
+	i7-=1
+	a2h = xmem[i7]
+	i7-=1
+	a2g = xmem[i7]
+	i7-=1
+	i5 = xmem[i7]
+	i7-=1
+	i2 = xmem[i7]
+	i7-=1
+	i3 = xmem[i7]
+	i7-=1
+	i4 = xmem[i7]
+	
+	ret
+	
+_processing:
+	# push
+	ymem[i7] = a2;	i7 += 1
+	ymem[i7] = i2;	i7 += 1
+	ymem[i7] = i3
+	
+	i2 = i0
+	i3 = i1
+	
+	nm2 = (16)
+	x3 = xmem[_preGain]
+	do(_BLOCK_SIZE),>loop
+		nm3 = (16)
+		# first stage, apply constant pre-Gain
+		# need to save inSamples to temp variable becouse i/o buffer is shared bethween in and out samples -> pIn and pOut point to same memory
+		# *tempSamplePtr = *samplePtrIn * preGain;	samplePtrIn += BLOCK_SIZE;
+		y0 = ymem[i2];	i2 += n
+		a0 = x3 * y0;	y0 = ymem[i2];	i2 -= n		#samplePtrIn -= BLOCK_SIZE;
+		# *tempSamplePtr = *samplePtrIn * preGain
+		a1 = x3 * y0; i3 += n
+		
+		# second stage, apply filters
+		# first ch - passthrough
+		# *samplePtrOut = *tempSamplePtr;	samplePtrOut += BLOCK_SIZE;
+		ymem[i3] = a0;	i3 += n
+		
+		#save a0
+		a2 = a0
+		# second ch	- LPF
+ 		b1 = (0)
+ 		i4 = (_coeffs_lpf_18kHz)
+ 		call _fir_circular
+ 		ymem[i3] = a0;	i3 += n
+		
+ 		#third ch - HPF
+ 		a0 = a2
+ 		b1 = (1)
+ 		i4 = (_coeffs_hpf_800Hz)
+ 		call _fir_circular
+ 		ymem[i3] = a0;  i3 += n
+ 		
+ 		#fourth ch - BPF
+ 		a0 = a2
+ 		b1 = (2)
+ 		i4 = (_coeffs_bpf)
+ 		call _fir_circular
+ 		ymem[i3] = a0; i3 += n
+ 		
+ 		#fifth ch - BPF
+		a0 = a2
+ 		b1 = (3)
+ 		i4 = (_coeffs_bpf)
+ 		call _fir_circular
+ 		ymem[i3] = a0; i3 += n
+ 		
+ 		#sixth ch - HPF
+ 		a0 = a2
+ 		b1 = (4)
+ 		i4 = (_coeffs_hpf_800Hz)
+ 		call _fir_circular
+		ymem[i3] = a0;  i3 += n
+ 		
+ 		#seventh ch - LPF
+ 		a0 = a2
+ 		b1 = (5)
+ 		i4 = (_coeffs_lpf_18kHz)
+ 		call _fir_circular
+		ymem[i3] = a0
+		
+		nm3 = (111)
+		
+		#samplePtrIn++;
+		i4 += 1
+%loop:	i3 -= n
+
+	nm2 = (0)
+	nm3 = (0)
+
+	#pop
+	i3 = ymem[i7];	i7 -= 1	
+	i4 = ymem[i7];	i7 -= 1
+	a2 = ymem[i7]
+	ret
